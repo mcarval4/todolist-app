@@ -39,3 +39,17 @@ artefato não assinado falha antes da publicação.
 O pacote GHCR deve ser público para o ambiente local permanecer replicável sem credenciais de
 registro. Para uma imagem privada, crie um `imagePullSecret` fora do Git e configure o chart antes
 da promoção.
+
+## Runner indisponível
+
+1. Confirme que o MacBook está ligado e Docker Desktop está pronto.
+2. Verifique o runner e o cluster conforme `docs/self-hosted-runner.md`.
+3. Não cancele o job automaticamente antes de 24 horas de indisponibilidade.
+4. Após recuperar o host, use `workflow_dispatch` para reexecutar apenas se o workflow não retomar.
+
+## Falha de deployment ou teste
+
+1. Consulte o artefato `local-platform-evidence-<run-id>` no GitHub Actions.
+2. Verifique `kubectl describe application/todolist -n argocd` e eventos do namespace.
+3. Corrija em nova feature branch; não altere manifests diretamente no cluster.
+4. Use a reversão GitOps por pull request para retornar ao digest anterior, se necessário.

@@ -1,6 +1,10 @@
 name: Build And Propose Release
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - VERSION
   workflow_dispatch:
 
 permissions:
@@ -47,6 +51,7 @@ jobs:
       - name: Create promotion pull request
         uses: peter-evans/create-pull-request@v7
         with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           branch: chore/promote-todolist-image
           commit-message: "chore(release): promote signed todolist image"
           title: "chore(release): promote signed TodoList image"

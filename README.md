@@ -166,3 +166,9 @@ Consulte [a arquitetura](docs/architecture.md), os [ADRs](docs/adr/) e os
 [runbooks](docs/runbooks.md) para decisões, limitações e procedimentos operacionais. Antes da
 primeira promoção, aplique a [ruleset GitHub](docs/github-ruleset.md) que exige revisão humana em
 `main`. O bypass administrativo desta demonstração não é a política recomendada para produção.
+
+Consulte também o fluxo de [CI/CD](docs/ci-cd.md), a operação do
+[runner local](docs/self-hosted-runner.md), a [gestão de releases](docs/release-management.md) e
+a [segurança da automação](docs/security-automation.md).
+
+Para configurar o runner e o token de demonstração, execute `./scripts/setup-automation.sh`.

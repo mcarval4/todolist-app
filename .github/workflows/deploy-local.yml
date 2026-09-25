@@ -1,0 +1,65 @@
+name: Deploy And Verify Local Platform
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - charts/todolist/values-demo.yaml
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: local-kind-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, macos, local-kind]
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for Argo CD synchronization
+        run: ./scripts/wait-for-argocd.sh
+      - name: Run smoke test
+        run: curl --fail --retry 10 --retry-all-errors http://todolist.localhost/healthz
+      - name: Run resilience test
+        run: make test-ha
+      - name: Verify RBAC boundaries
+        run: ./tests/security/rbac.sh
+      - name: Collect deployment evidence
+        if: always()
+        run: make evidence
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-platform-evidence-${{ github.run_id }}
+          path: evidence/generated/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Create SemVer tag and GitHub release
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(tr -d '[:space:]' < VERSION)
+          case "$version" in
+            v*) tag="$version" ;;
+            *) tag="v$version" ;;
+          esac
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            target=$(git rev-parse "$tag^{}")
+            if [ "$target" != "$GITHUB_SHA" ]; then
+              printf 'Release tag %s points to a different commit.\n' "$tag" >&2
+              exit 1
+            fi
+          else
+            git tag -a "$tag" -m "Release $tag"
+            git push origin "$tag"
+          fi
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --generate-notes
