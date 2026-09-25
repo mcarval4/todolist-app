@@ -1,6 +1,7 @@
 # GitHub Ruleset Necessário
 
-O repositório deve configurar uma ruleset para `main` antes da primeira promoção de imagem:
+O repositório possui uma ruleset ativa, `Protect main`, para `main`. Forks ou repositórios que
+reutilizem esta plataforma devem configurar uma equivalente antes da primeira promoção de imagem:
 
 - Bloquear push direto e exigir pull request.
 - Exigir ao menos uma aprovação humana.
@@ -10,4 +11,4 @@ O repositório deve configurar uma ruleset para `main` antes da primeira promoç
 - Restringir bypass a administradores explicitamente autorizados.
 
 Essa configuração é feita por uma pessoa com permissão administrativa no GitHub. Ela não é aplicada
-por este repositório para evitar que automação altere regras de proteção sem revisão humana.
+por workflows, para evitar que automação altere regras de proteção sem revisão humana.

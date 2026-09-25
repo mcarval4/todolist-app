@@ -35,3 +35,7 @@ ser coletadas antes com `make evidence`.
 O workflow `Publish SemVer Release` verifica que a tag pertence a `main`, valida assinatura Cosign
 e atestado SPDX, então cria a GitHub Release. Uma tag que aponte para digest de placeholder ou
 artefato não assinado falha antes da publicação.
+
+O pacote GHCR deve ser público para o ambiente local permanecer replicável sem credenciais de
+registro. Para uma imagem privada, crie um `imagePullSecret` fora do Git e configure o chart antes
+da promoção.

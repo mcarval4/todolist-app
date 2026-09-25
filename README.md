@@ -136,6 +136,8 @@ fornece tolerância à perda do host, do Docker Desktop ou do disco local.
 - 25 GiB livres no host
 - `git`, `make`, `terraform`, `kind`, `kubectl` e `helm`
 - URL HTTPS deste repositório configurada em `TF_VAR_git_repository_url`
+- Pacote da imagem no GHCR com visibilidade pública, para que qualquer máquina replique o deploy
+  local sem credencial de registro
 
 ### Bootstrap
 
