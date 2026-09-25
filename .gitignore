@@ -1,0 +1,13 @@
+.DS_Store
+.venv/
+__pycache__/
+*.py[cod]
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+.local/
+evidence/generated/
+infra/platform/application.generated.yaml
+infra/platform/kyverno.generated.yaml
+.sops.yaml
