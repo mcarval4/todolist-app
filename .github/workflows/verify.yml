@@ -1,0 +1,41 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches:
+      - feat/**
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.16.4"
+      - name: Compile Python application
+        run: python -m py_compile app.py
+      - name: Build application image
+        run: docker build --tag todolist:verify .
+      - name: Lint Helm chart
+        run: helm lint charts/todolist
+      - name: Render Helm chart
+        run: helm template todolist charts/todolist --values charts/todolist/values-demo.yaml > rendered.yaml
+      - name: Validate rendered Kubernetes resources
+        run: docker run --rm --volume "$PWD:/work" ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary /work/rendered.yaml
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive infra
+      - name: Validate cluster Terraform
+        run: terraform -chdir=infra/cluster init -backend=false && terraform -chdir=infra/cluster validate
+      - name: Validate platform Terraform
+        run: terraform -chdir=infra/platform init -backend=false && terraform -chdir=infra/platform validate
