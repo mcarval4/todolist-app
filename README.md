@@ -120,3 +120,49 @@ A aplicação fica disponível em `http://localhost:5000`.
 
 A aplicação foi escrita para rodar em Kubernetes. Fora de um cluster, parte das
 funcionalidades não funciona por completo.
+
+## Plataforma Kubernetes
+
+Este repositório inclui uma plataforma local de demonstração baseada em kind, Terraform, Cilium,
+Argo CD, CloudNativePG, Kyverno e Prometheus/Grafana. Ela é declarativa e reproduzível em macOS,
+Linux e Windows via WSL2, desde que Docker esteja disponível.
+
+O ambiente valida automação, GitOps, segurança de imagens e resiliência de componentes. Ele não
+fornece tolerância à perda do host, do Docker Desktop ou do disco local.
+
+### Pré-requisitos
+
+- Docker Desktop com 4 CPUs, 6 GiB de memória e 20 GiB de disco disponíveis
+- 25 GiB livres no host
+- `git`, `make`, `terraform`, `kind`, `kubectl` e `helm`
+- URL HTTPS deste repositório configurada em `TF_VAR_git_repository_url`
+- Pacote da imagem no GHCR com visibilidade pública, para que qualquer máquina replique o deploy
+  local sem credencial de registro
+
+### Bootstrap
+
+```bash
+export TF_VAR_git_repository_url=https://github.com/<org>/<repo>.git
+make bootstrap
+```
+
+O comando cria um cluster kind com um control-plane e três workers, instala a plataforma e cria a
+aplicação Argo CD. A imagem da aplicação é promovida por digest a partir de uma pull request de
+release aprovada; por isso o primeiro deploy requer uma imagem publicada no GHCR.
+
+### Operação
+
+| Serviço | Endereço |
+|---|---|
+| TodoList | `http://todolist.localhost` |
+| Argo CD | `kubectl -n argocd port-forward svc/argocd-server 8080:80` |
+| Grafana | `kubectl -n monitoring port-forward svc/grafana 3000:80` |
+
+Execute `make test-ha` para validar rollout, recuperação de pod e perda de worker com tráfego
+contínuo. Execute `make evidence` para coletar estado sanitizado do cluster em
+`evidence/generated/`.
+
+Consulte [a arquitetura](docs/architecture.md), os [ADRs](docs/adr/) e os
+[runbooks](docs/runbooks.md) para decisões, limitações e procedimentos operacionais. Antes da
+primeira promoção, aplique a [ruleset GitHub](docs/github-ruleset.md) que exige revisão humana em
+`main`. O bypass administrativo desta demonstração não é a política recomendada para produção.

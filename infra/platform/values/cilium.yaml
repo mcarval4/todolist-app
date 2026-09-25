@@ -1,0 +1,16 @@
+kubeProxyReplacement: true
+ingressController:
+  enabled: true
+  loadbalancerMode: shared
+  service:
+    type: NodePort
+    insecureNodePort: 30080
+    secureNodePort: 30443
+operator:
+  replicas: 1
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
