@@ -261,7 +261,7 @@ fi
 mkdir -p "$RUNNER_HOME"
 needs_registration=true
 if [[ -f "$RUNNER_HOME/.runner" ]]; then
-  RUNNER_LABELS=$(gh api "repos/$REPOSITORY/actions/runners" | jq -r --arg name "$RUNNER_NAME" '[.runners[] | select(.name == $name) | .labels[].name] | join(" ")')
+  RUNNER_LABELS=$(gh api "repos/$REPOSITORY/actions/runners" | jq -r --arg name "$RUNNER_NAME" '[.runners[] | select(.name == $name) | .labels[].name | ascii_downcase] | join(" ")')
   if [[ " $RUNNER_LABELS " == *" macos "* && " $RUNNER_LABELS " == *" local-kind "* ]]; then
     say "Runner already registered with required labels."
     needs_registration=false
@@ -269,7 +269,7 @@ if [[ -f "$RUNNER_HOME/.runner" ]]; then
     warn "Existing runner registration is missing required labels and will be replaced."
     launchctl bootout "gui/$(id -u)" "$LAUNCH_AGENT" >/dev/null 2>&1 || true
     REMOVAL_TOKEN=$(gh api --method POST "repos/$REPOSITORY/actions/runners/remove-token" --jq .token)
-    "$RUNNER_HOME/config.sh" remove --unattended --token "$REMOVAL_TOKEN"
+    "$RUNNER_HOME/config.sh" remove --token "$REMOVAL_TOKEN"
   fi
 fi
 if [[ "$needs_registration" == true ]]; then
