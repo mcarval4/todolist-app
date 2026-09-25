@@ -165,4 +165,4 @@ contínuo. Execute `make evidence` para coletar estado sanitizado do cluster em
 Consulte [a arquitetura](docs/architecture.md), os [ADRs](docs/adr/) e os
 [runbooks](docs/runbooks.md) para decisões, limitações e procedimentos operacionais. Antes da
 primeira promoção, aplique a [ruleset GitHub](docs/github-ruleset.md) que exige revisão humana em
-`main`.
+`main`. O bypass administrativo desta demonstração não é a política recomendada para produção.
