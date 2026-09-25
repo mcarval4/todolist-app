@@ -18,6 +18,10 @@ Execute `./scripts/setup-automation.sh` para validar os pré-requisitos, criar o
 release-please, registrar o runner e instalar o LaunchAgent. O wizard não deve ser executado por
 CI e requer uma pessoa presente para emitir o PAT e confirmar a instalação do serviço.
 
+O runner fica em `~/.local/share/todolist-actions-runner`. O caminho não pode conter espaços,
+porque o GitHub Actions Runner executa scripts de shell a partir desse diretório. O wizard migra
+automaticamente a instalação legada em `~/Library/Application Support/`.
+
 ## Execução
 
 O workflow `Deploy And Verify Local Platform` usa `concurrency` para impedir testes destrutivos
