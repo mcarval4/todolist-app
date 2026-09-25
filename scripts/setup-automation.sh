@@ -262,7 +262,11 @@ if [[ -f "$RUNNER_HOME/.runner" ]]; then
 fi
 if [[ "$needs_registration" == true ]]; then
   if [[ ! -f "$RUNNER_HOME/config.sh" ]]; then
-  RUNNER_URL=$(gh api repos/actions/runner/releases/latest --jq '.assets[] | select(.name | test("osx-arm64.tar.gz$")) | .browser_download_url')
+  RUNNER_URL=$(gh api repos/actions/runner/releases/latest --jq '.assets[] | select(.name | test("^actions-runner-osx-arm64-[0-9].*\\.tar\\.gz$")) | .browser_download_url')
+  if [[ -z "$RUNNER_URL" ]]; then
+    warn "Could not locate the ARM64 macOS runner download."
+    exit 1
+  fi
   curl --fail --location "$RUNNER_URL" --output "$RUNNER_HOME/runner.tar.gz"
   tar -xzf "$RUNNER_HOME/runner.tar.gz" -C "$RUNNER_HOME"
   rm "$RUNNER_HOME/runner.tar.gz"
