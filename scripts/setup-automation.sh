@@ -186,7 +186,9 @@ finish() {
 
 TOTAL_STAGES=4
 ENV_FILE="${ENV_FILE:-.local/release-please.env}"
-RUNNER_HOME="${RUNNER_HOME:-$HOME/Library/Application Support/todolist-actions-runner}"
+DEFAULT_RUNNER_HOME="$HOME/.local/share/todolist-actions-runner"
+LEGACY_RUNNER_HOME="$HOME/Library/Application Support/todolist-actions-runner"
+RUNNER_HOME="${RUNNER_HOME:-$DEFAULT_RUNNER_HOME}"
 LAUNCH_AGENT="$HOME/Library/LaunchAgents/com.todolist.local-kind-runner.plist"
 
 banner "TodoList automation setup"
@@ -245,6 +247,16 @@ if ! confirm "Download and register the runner now?"; then
   warn "Runner registration skipped. Re-run this wizard when ready."
   finish
   exit 0
+fi
+if [[ "$RUNNER_HOME" =~ [[:space:]] ]]; then
+  warn "RUNNER_HOME cannot contain spaces because GitHub Actions cannot execute shell steps from that path."
+  exit 1
+fi
+if [[ "$RUNNER_HOME" == "$DEFAULT_RUNNER_HOME" && -f "$LEGACY_RUNNER_HOME/.runner" && ! -e "$RUNNER_HOME" ]]; then
+  say "Moving the existing runner from the legacy path without spaces."
+  launchctl bootout "gui/$(id -u)" "$LAUNCH_AGENT" >/dev/null 2>&1 || true
+  mkdir -p "$(dirname "$RUNNER_HOME")"
+  mv "$LEGACY_RUNNER_HOME" "$RUNNER_HOME"
 fi
 mkdir -p "$RUNNER_HOME"
 needs_registration=true
