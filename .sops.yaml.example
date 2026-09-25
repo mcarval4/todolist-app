@@ -1,0 +1,5 @@
+# Copy to .sops.yaml after setting the team's real age public recipient.
+creation_rules:
+  - path_regex: platform/secrets/.*\.sops\.yaml$
+    encrypted_regex: '^(data|stringData)$'
+    age: age1replace-with-the-team-age-public-key
