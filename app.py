@@ -69,7 +69,7 @@ class Todo(db.Model):
     done = db.Column(db.Boolean, default=False)
 
 def _k8s_namespace():
-    return open(K8S_NS_PATH).read()
+    return open(K8S_NS_PATH).read().strip()
 
 def _k8s_get(path):
     token = open(K8S_TOKEN_PATH).read()
