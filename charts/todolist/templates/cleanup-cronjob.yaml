@@ -10,6 +10,10 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: {{ include "todolist.name" . }}
+            app.kubernetes.io/component: cleanup
         spec:
           restartPolicy: OnFailure
           securityContext:

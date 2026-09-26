@@ -17,6 +17,14 @@ spec:
       ports:
         - protocol: TCP
           port: 5000
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "todolist.name" . }}
+              app.kubernetes.io/component: cleanup
+      ports:
+        - protocol: TCP
+          port: 5000
   egress:
     - to:
         - namespaceSelector:
