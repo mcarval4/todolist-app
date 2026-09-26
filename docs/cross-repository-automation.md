@@ -19,3 +19,8 @@ Configure the following Actions secrets in `todolist-app`:
 
 The private key is stored only as a GitHub Actions secret. It must not be copied to `.env`,
 Terraform state, Git history or deployment evidence.
+
+Configure the same two secrets in `todolist-gitops`. After the local GitOps workflow has passed
+smoke, HA and RBAC checks, it sends a repository dispatch to `todolist-app`. The
+`Release Validated Application` workflow then tags the source revision supplied by the promotion
+metadata and creates the GitHub Release there.

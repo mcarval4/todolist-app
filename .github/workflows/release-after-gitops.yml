@@ -1,0 +1,38 @@
+name: Release Validated Application
+
+on:
+  repository_dispatch:
+    types: [gitops-validation-succeeded]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.client_payload.source_revision }}
+      - name: Create SemVer tag and GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.event.client_payload.version }}
+          SOURCE_REVISION: ${{ github.event.client_payload.source_revision }}
+        run: |
+          test -n "$VERSION"
+          test -n "$SOURCE_REVISION"
+          case "$VERSION" in
+            v*) tag="$VERSION" ;;
+            *) tag="v$VERSION" ;;
+          esac
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            target=$(git rev-parse "$tag^{}")
+            test "$target" = "$SOURCE_REVISION"
+          else
+            git tag -a "$tag" "$SOURCE_REVISION" -m "Release $tag"
+            git push origin "$tag"
+          fi
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --target "$SOURCE_REVISION" --title "$tag" --generate-notes
