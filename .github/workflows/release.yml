@@ -42,18 +42,39 @@ jobs:
         run: |
           cosign sign --yes ghcr.io/${{ github.repository }}@${{ steps.image.outputs.digest }}
           cosign attest --yes --type spdx --predicate todolist.spdx.json ghcr.io/${{ github.repository }}@${{ steps.image.outputs.digest }}
+      - name: Create GitOps installation token
+        id: gitops-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.TODOLIST_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.TODOLIST_AUTOMATION_APP_PRIVATE_KEY }}
+          owner: mcarval4
+          repositories: todolist-gitops
+      - name: Check out GitOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: mcarval4/todolist-gitops
+          token: ${{ steps.gitops-token.outputs.token }}
+          path: gitops
+      - name: Read release version
+        id: version
+        run: printf 'value=%s\n' "$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
       - name: Update proposed GitOps digest
         uses: mikefarah/yq@v4.44.3
         with:
           cmd: >-
             yq -i '.image.repository = "ghcr.io/${{ github.repository }}" |
-            .image.digest = "${{ steps.image.outputs.digest }}"' charts/todolist/values-demo.yaml
+            .image.digest = "${{ steps.image.outputs.digest }}" |
+            .release.version = "${{ steps.version.outputs.value }}" |
+            .release.sourceRevision = "${{ github.sha }}"'
+            gitops/environments/local/todolist-values.yaml
       - name: Create promotion pull request
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          path: gitops
+          token: ${{ steps.gitops-token.outputs.token }}
           branch: chore/promote-todolist-image
           commit-message: "chore(release): promote signed todolist image"
           title: "chore(release): promote signed TodoList image"
           body: |
-            Promotes a signed immutable image digest.
+            Promotes a signed immutable image digest from `${{ github.sha }}`.
