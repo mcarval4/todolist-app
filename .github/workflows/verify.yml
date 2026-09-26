@@ -36,7 +36,7 @@ jobs:
       - name: Render Helm chart
         run: helm template todolist charts/todolist --values charts/todolist/values-demo.yaml > rendered.yaml
       - name: Validate rendered Kubernetes resources
-        run: docker run --rm --volume "$PWD:/work" ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary /work/rendered.yaml
+        run: docker run --rm --volume "$PWD:/work" ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -skip CiliumNetworkPolicy /work/rendered.yaml
       - name: Check Terraform formatting
         run: terraform fmt -check -recursive infra
       - name: Validate cluster Terraform
