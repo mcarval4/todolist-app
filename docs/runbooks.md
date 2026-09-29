@@ -22,19 +22,17 @@ ser coletadas antes com `make evidence`.
 
 ## Publicar uma release SemVer
 
-1. Mescle a pull request da feature e a pull request de promoção do digest, ambas após revisão
-   humana.
-2. Confirme que Argo CD sincronizou o digest e que os testes operacionais foram aprovados.
-3. Crie uma tag anotada no commit de `main` que contém o digest implantado:
+1. Mescle a pull request da feature após revisão humana. O release-please abre a pull request de
+   versão com `VERSION` e changelog calculados pelos Conventional Commits.
+2. Revise e mescle a pull request de versão. O workflow de build publica imagem multiarch, gera
+   SBOM, assina via Cosign/OIDC e abre uma pull request de promoção do digest.
+3. Revise e mescle a pull request de digest. Argo CD sincroniza o chart e o runner `local-kind`
+   executa smoke test, HA, RBAC e coleta de evidências.
+4. Se todos os gates passarem, `Deploy And Verify Local Platform` cria automaticamente a tag
+   anotada e a GitHub Release. Não crie tags manualmente para esse fluxo.
 
-   ```bash
-   git tag -a v1.0.0 -m "Release v1.0.0"
-   git push origin v1.0.0
-   ```
-
-O workflow `Publish SemVer Release` verifica que a tag pertence a `main`, valida assinatura Cosign
-e atestado SPDX, então cria a GitHub Release. Uma tag que aponte para digest de placeholder ou
-artefato não assinado falha antes da publicação.
+Se o deployment ou um teste falhar, a tag não é criada. Corrija em uma nova pull request e repita a
+promoção pelo fluxo GitOps.
 
 O pacote GHCR deve ser público para o ambiente local permanecer replicável sem credenciais de
 registro. Para uma imagem privada, crie um `imagePullSecret` fora do Git e configure o chart antes

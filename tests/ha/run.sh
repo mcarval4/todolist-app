@@ -19,10 +19,21 @@ for command in kubectl curl docker; do
   require_command "$command"
 done
 
+application_pods() {
+  for pod in $(kubectl get pods -n "$namespace" -l app.kubernetes.io/name=todolist -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'); do
+    owner=$(kubectl get pod -n "$namespace" "$pod" -o jsonpath='{.metadata.ownerReferences[0].kind}')
+    phase=$(kubectl get pod -n "$namespace" "$pod" -o jsonpath='{.status.phase}')
+    if [ "$owner" = "ReplicaSet" ] && [ "$phase" = "Running" ]; then
+      printf '%s\n' "$pod"
+    fi
+  done
+}
+
 probe() {
   while :; do
-    status=$(curl --connect-timeout 2 --max-time 5 --silent --output /dev/null --write-out '%{http_code}' "$health_url" || true)
-    printf '%s %s\n' "$(date -u +%FT%TZ)" "$status" >>"$output_dir/health.log"
+    started=$(date -u +%s)
+    status=$(curl --connect-timeout 1 --max-time 1 --silent --output /dev/null --write-out '%{http_code}' "$health_url" || true)
+    printf '%s %s %s\n' "$started" "$(date -u +%FT%TZ)" "$status" >>"$output_dir/health.log"
     sleep 1
   done
 }
@@ -33,6 +44,7 @@ cleanup() {
   kill "$probe_pid" 2>/dev/null || true
   if [ -n "${stopped_worker:-}" ]; then
     docker start "$stopped_worker" >/dev/null 2>&1 || true
+    kubectl wait --for=condition=Ready "node/$worker" --timeout=120s >"$output_dir/worker-recovery.txt" 2>&1 || true
   fi
 }
 trap cleanup EXIT INT TERM
@@ -42,24 +54,74 @@ kubectl rollout status "deployment/$deployment" -n "$namespace" --timeout=180s
 kubectl rollout restart "deployment/$deployment" -n "$namespace"
 kubectl rollout status "deployment/$deployment" -n "$namespace" --timeout=180s
 
-pod=$(kubectl get pods -n "$namespace" -l app.kubernetes.io/name=todolist -o jsonpath='{.items[0].metadata.name}')
+set -- $(application_pods)
+if [ "$#" -eq 0 ]; then
+  printf 'No running application Pods were found.\n' >&2
+  exit 1
+fi
+pod=$1
 kubectl delete pod -n "$namespace" "$pod" --wait=false
 kubectl rollout status "deployment/$deployment" -n "$namespace" --timeout=180s
 
-worker=$(kubectl get pods -n "$namespace" -l app.kubernetes.io/name=todolist -o jsonpath='{.items[0].spec.nodeName}')
+primary_pod=$(kubectl get cluster/todolist-db -n "$namespace" -o jsonpath='{.status.currentPrimary}')
+if [ -z "$primary_pod" ]; then
+  printf 'CloudNativePG has no current primary; refusing to stop a worker.\n' >&2
+  exit 1
+fi
+primary_node=$(kubectl get pod -n "$namespace" "$primary_pod" -o jsonpath='{.spec.nodeName}')
+if [ -z "$primary_node" ]; then
+  printf 'Could not determine the primary database node; refusing to stop a worker.\n' >&2
+  exit 1
+fi
+
+worker=""
+for pod in $(application_pods); do
+  node=$(kubectl get pod -n "$namespace" "$pod" -o jsonpath='{.spec.nodeName}')
+  if [ "$node" != "$primary_node" ]; then
+    worker=$node
+    break
+  fi
+done
+if [ -z "$worker" ]; then
+  printf 'No application worker is available outside the primary database node.\n' >&2
+  exit 1
+fi
+
 stopped_worker="$cluster_name-${worker#${cluster_name}-}"
+printf 'primary_pod=%s\nprimary_node=%s\nstopped_worker=%s\n' "$primary_pod" "$primary_node" "$stopped_worker" >"$output_dir/worker-selection.txt"
+kubectl get cluster/todolist-db -n "$namespace" -o wide >"$output_dir/database-before-worker-failure.txt"
 docker stop "$stopped_worker" >/dev/null
 sleep 10
 
 kubectl get pods -n "$namespace" -o wide >"$output_dir/pods-after-worker-failure.txt"
 kubectl get hpa,pdb -n "$namespace" >"$output_dir/availability-controls.txt"
+kubectl get cluster/todolist-db -n "$namespace" -o wide >"$output_dir/database-after-worker-failure.txt"
 sleep 5
 
-failed=$(awk '$2 != "200" { count++ } END { print count + 0 }' "$output_dir/health.log")
+finished=$(date -u +%s)
+failed=$(awk '$3 != "200" { count++ } END { print count + 0 }' "$output_dir/health.log")
 total=$(wc -l <"$output_dir/health.log" | tr -d ' ')
-printf 'total=%s failed=%s\n' "$total" "$failed" >"$output_dir/summary.txt"
+max_outage=$(awk -v finished="$finished" '
+  $3 != "200" {
+    if (start == "") start = $1
+    next
+  }
+  start != "" {
+    outage = $1 - start
+    if (outage > max) max = outage
+    start = ""
+  }
+  END {
+    if (start != "") {
+      outage = finished - start
+      if (outage > max) max = outage
+    }
+    print max + 0
+  }
+' "$output_dir/health.log")
+printf 'total=%s failed_samples=%s max_outage_seconds=%s\n' "$total" "$failed" "$max_outage" >"$output_dir/summary.txt"
 
-if [ "$failed" -gt 10 ]; then
+if [ "$max_outage" -gt 10 ]; then
   printf 'HA test exceeded the 10-second node-failure error budget.\n' >&2
   exit 1
 fi
