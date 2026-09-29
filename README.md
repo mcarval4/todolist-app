@@ -4,6 +4,11 @@ Aplicação web de lista de tarefas.
 
 ![Tela principal da aplicação](assets/todolist.png)
 
+## Repositórios relacionados
+
+- [todolist-gitops](https://github.com/mcarval4/todolist-gitops): manifestos GitOps e configuração de entrega da aplicação.
+- [todolist-platform](https://github.com/mcarval4/todolist-platform): infraestrutura e serviços da plataforma Kubernetes.
+
 ## Stack
 
 - Python 3.11
